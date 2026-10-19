@@ -1,0 +1,6 @@
+node_modules/
+# Sessão do navegador (cookies de login) — nunca versionar
+.auth/
+# Histórico de envios e resultados de varredura
+data/
+test-results/

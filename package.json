@@ -1,0 +1,30 @@
+{
+  "name": "99freelas-bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Automação de propostas no 99freelas com login manual e filtro de projetos",
+  "scripts": {
+    "login": "tsx src/cli.ts login",
+    "scan": "tsx src/cli.ts scan",
+    "send": "tsx src/cli.ts send",
+    "inspect": "tsx src/cli.ts inspect",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "daily": "scripts/daily.sh",
+    "schedule": "scripts/schedule.sh"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  },
+  "dependencies": {
+    "@google/genai": "^2.30.0",
+    "groq-sdk": "^1.6.0",
+    "node-html-parser": "^9.0.5",
+    "playwright": "^1.64.1",
+    "zod": "^4.6.7"
+  }
+}
