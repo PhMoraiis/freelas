@@ -1,4 +1,4 @@
-# 99freelas-bot
+# freelas
 
 Robô que encontra projetos no [99freelas](https://www.99freelas.com.br) compatíveis com o seu perfil
 e envia propostas personalizadas por você, do mais compatível para o menos, até acabarem as suas conexões.
@@ -129,8 +129,9 @@ Cuidados:
   Faça login, **feche a janela**, e a execução continua. Se ninguém fizer login em 60 minutos, a janela
   fecha e o próximo gatilho do dia tenta de novo.
 - **Uma execução por vez:** enquanto uma está rodando (ou esperando o login), outro gatilho não começa outra.
-- **Pasta do projeto:** o agendamento aponta para a pasta onde você rodou o `install`. Se mover o projeto,
-  rode o `install` de novo no lugar novo.
+- **Pasta do projeto e versão do Node:** o agendamento grava a pasta do projeto e o caminho do Node do
+  terminal onde você rodou o `install` (o `launchd` não carrega o `nvm`). Se mover o projeto ou trocar a
+  versão do Node, rode o `install` de novo. Se esquecer, a notificação avisa: "Node/npm não encontrado".
 - O navegador abre uma janela durante a execução (é o que o `headless: false` do config pede, porque o
   Cloudflare do site desconfia menos de janela visível).
 
@@ -342,6 +343,7 @@ escolhe outro freelancer. Antes de cada envio, o robô confere no formulário e:
 | `gemini indisponível (cota ... esgotada); seguindo com groq` | Normal no plano gratuito: o Groq assume o resto da execução |
 | `N projeto(s) sem nota ficam fora do ranking` | Os dois provedores falharam nesses projetos; eles voltam na próxima execução |
 | A IA aprova projetos que você não quer | Acrescente o tipo de trabalho na lista do que você recusa, em `ai.freelancer`, ou aumente o `minFit` |
+| `Node/npm não encontrado` (notificação do agendamento) | Rode `npm run schedule -- install 09:00` de novo, num terminal onde `node -v` funcione |
 | `envio não confirmado` | Confira no site, em "Minhas propostas"; há um screenshot em `data/screenshots/` |
 
 ---

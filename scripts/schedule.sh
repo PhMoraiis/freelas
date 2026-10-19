@@ -8,7 +8,9 @@
 #   scripts/schedule.sh print [HH:MM]     só mostra o arquivo .plist que seria instalado
 set -euo pipefail
 
-label="local.99freelas-bot"
+label="local.freelas"
+# Rótulo usado antes da troca de nome do projeto; removido no install/uninstall
+legacy_label="local.99freelas-bot"
 project="$(cd "$(dirname "$0")/.." && pwd)"
 plist="$HOME/Library/LaunchAgents/$label.plist"
 domain="gui/$(id -u)"
@@ -16,6 +18,9 @@ domain="gui/$(id -u)"
 # (node/npm) e as chaves GEMINI_API_KEY e GROQ_API_KEY
 login_shell="$(dscl . -read "/Users/$USER" UserShell 2>/dev/null | awk '{print $2}')"
 login_shell="${login_shell:-${SHELL:-/bin/zsh}}"
+# O launchd começa com um PATH mínimo, e o nvm só ativa o Node em terminais interativos: grava no
+# agendamento a pasta do Node do terminal que fez a instalação
+node_bin="$(dirname "$(command -v node 2>/dev/null || echo /node-ausente/node)")"
 
 render() {
   local time="${1:-09:00}"
@@ -40,6 +45,11 @@ render() {
   </array>
   <key>WorkingDirectory</key>
   <string>$project</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>$node_bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
   <!-- Ao fazer login (depois de ligar ou reiniciar o Mac) -->
   <key>RunAtLoad</key>
   <true/>
@@ -60,9 +70,19 @@ render() {
 PLIST
 }
 
+remove_legacy() {
+  launchctl bootout "$domain/$legacy_label" 2>/dev/null || true
+  rm -f "$HOME/Library/LaunchAgents/$legacy_label.plist"
+}
+
 case "${1:-}" in
   install)
+    if [ ! -x "$node_bin/node" ]; then
+      echo "Node não encontrado neste terminal; abra um terminal onde 'node -v' funcione e rode de novo." >&2
+      exit 1
+    fi
     mkdir -p "$HOME/Library/LaunchAgents" "$project/data/logs"
+    remove_legacy
     launchctl bootout "$domain/$label" 2>/dev/null || true
     render "${2:-09:00}" >"$plist"
     plutil -lint "$plist" >/dev/null
@@ -71,6 +91,7 @@ case "${1:-}" in
     echo "Logs em $project/data/logs/"
     ;;
   uninstall)
+    remove_legacy
     launchctl bootout "$domain/$label" 2>/dev/null || true
     rm -f "$plist"
     echo "Agendamento removido."

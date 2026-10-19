@@ -18,7 +18,7 @@ scheduled=$([ "$#" -eq 0 ] && echo 1 || echo 0)
 
 notify() {
   [ "${NOTIFY:-1}" = "1" ] || return 0
-  osascript -e "display notification \"$1\" with title \"99freelas-bot\"" >/dev/null 2>&1 || true
+  osascript -e "display notification \"$1\" with title \"freelas\"" >/dev/null 2>&1 || true
 }
 
 if [ "$scheduled" = "1" ] && [ "${FORCE:-0}" != "1" ] && [ "$(cat "$stamp" 2>/dev/null)" = "$today" ]; then
@@ -46,6 +46,12 @@ for _ in $(seq 1 20); do
 done
 
 echo "=== $(date '+%Y-%m-%d %H:%M:%S') ===" >>"$log"
+if ! command -v npm >/dev/null 2>&1; then
+  # O agendamento grava o caminho do Node na instalação; trocar a versão do Node exige reinstalar
+  echo "npm não encontrado (PATH=$PATH)" >>"$log"
+  notify "Falhou: Node/npm não encontrado. Rode npm run schedule -- install de novo."
+  exit 127
+fi
 npm run send -- "$@" >>"$log" 2>&1
 status=$?
 
