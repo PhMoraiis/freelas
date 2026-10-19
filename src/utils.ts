@@ -19,6 +19,6 @@ export async function ask(question: string): Promise<string> {
 /** Notificação do macOS; em outro sistema, ou se falhar, não faz nada. */
 export function notify(message: string): void {
   if (process.platform !== 'darwin') return;
-  const script = `display notification ${JSON.stringify(message)} with title "99freelas-bot"`;
+  const script = `display notification ${JSON.stringify(message)} with title "freelas"`;
   execFile('osascript', ['-e', script], () => {});
 }
