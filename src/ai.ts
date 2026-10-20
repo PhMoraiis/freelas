@@ -79,7 +79,7 @@ export function verdictSchema(profiles: Profile[]) {
   });
 }
 
-/** Converte o schema do zod para JSON Schema puro, aceito por Gemini e Groq. */
+/** Converte o schema do zod para JSON Schema puro, aceito pelo Groq. */
 export function toJsonSchema(schema: z.ZodType): Record<string, unknown> {
   // "$schema" não é aceito pelos provedores
   const { $schema, ...jsonSchema } = z.toJSONSchema(schema) as Record<string, unknown>;

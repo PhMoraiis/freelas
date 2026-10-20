@@ -45,7 +45,7 @@ function createAi(): SourcedGenerator | null {
   } catch (error) {
     if (!(error instanceof AiFatalError)) throw error;
     console.log(`  ⚠ IA indisponível (${error.message}). Seguindo sem IA.`);
-    console.log('    Confira GEMINI_API_KEY e GROQ_API_KEY no ambiente, ou rode com --no-ai.');
+    console.log('    Confira a GROQ_API_KEY no ambiente, ou rode com --no-ai.');
     return null;
   }
 }
@@ -83,7 +83,7 @@ async function withAi(evaluations: Evaluation[], generate: SourcedGenerator): Pr
   } catch (error) {
     if (!(error instanceof AiFatalError)) throw error;
     console.log(`  ⚠ IA indisponível (${error.message}). Seguindo só com as palavras-chave.`);
-    console.log('    Confira GEMINI_API_KEY e GROQ_API_KEY no ambiente, ou rode com --no-ai.');
+    console.log('    Confira a GROQ_API_KEY no ambiente, ou rode com --no-ai.');
     return evaluations;
   }
 }

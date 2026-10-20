@@ -9,7 +9,7 @@ export interface ProposalFields {
   value: number;
   days: number;
   message: string;
-  /** Quem redigiu: "gemini", "groq" ou "modelo" (template do perfil) */
+  /** Quem redigiu: o provedor da IA (ex.: "groq") ou "modelo" (template do perfil) */
   source: string;
 }
 

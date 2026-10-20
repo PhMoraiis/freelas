@@ -121,13 +121,13 @@ export interface AiVerdict {
   complexity: 'baixa' | 'media' | 'alta';
   reason: string;
   redFlags: string[];
-  /** Provedor que deu a nota (ex.: "gemini") */
+  /** Provedor que deu a nota (ex.: "groq") */
   source?: string;
 }
 
 export interface AiProviderConfig {
-  /** 'gemini' lê a chave de GEMINI_API_KEY; 'groq', de GROQ_API_KEY */
-  provider: 'gemini' | 'groq';
+  /** 'groq' lê a chave de GROQ_API_KEY */
+  provider: 'groq';
   model: string;
   /** Intervalo mínimo entre chamadas, para ficar abaixo do limite por minuto do plano gratuito */
   minIntervalMs?: number;

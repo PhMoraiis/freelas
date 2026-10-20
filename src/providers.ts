@@ -1,5 +1,4 @@
 import { AiFatalError, paced, withFallback, type Generator, type SourcedGenerator } from './ai';
-import { createGeminiGenerator } from './gemini';
 import { createGroqGenerator } from './groq';
 import type { AiConfig } from './types';
 
@@ -13,7 +12,7 @@ export function createGenerator(ai: AiConfig): SourcedGenerator {
 
   for (const { provider, model, minIntervalMs } of ai.providers) {
     try {
-      const generate = provider === 'gemini' ? createGeminiGenerator(model) : createGroqGenerator(model);
+      const generate = createGroqGenerator(model);
       chain.push({ name: provider, generate: minIntervalMs ? paced(generate, minIntervalMs) : generate });
     } catch (error) {
       if (!(error instanceof AiFatalError)) throw error;

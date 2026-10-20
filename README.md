@@ -121,7 +121,7 @@ Como funciona:
   Wi-Fi pode ainda não ter conectado.
 - Ao terminar, uma notificação do macOS mostra o resumo ("Resumo: 2 proposta(s) enviadas") ou o erro.
 - O log de cada dia fica em `data/logs/AAAA-MM-DD.log`.
-- Usa o seu shell de login (fish, aqui), que carrega o Node e as chaves `GEMINI_API_KEY` e `GROQ_API_KEY`.
+- Usa o seu shell de login (fish, aqui), que carrega a chave `GROQ_API_KEY`.
 
 Cuidados:
 
@@ -129,6 +129,12 @@ Cuidados:
   Faça login, **feche a janela**, e a execução continua. Se ninguém fizer login em 60 minutos, a janela
   fecha e o próximo gatilho do dia tenta de novo.
 - **Uma execução por vez:** enquanto uma está rodando (ou esperando o login), outro gatilho não começa outra.
+- **Projeto em disco externo:** o macOS bloqueia o acesso de tarefas em segundo plano a discos externos.
+  Para o agendamento funcionar, o fish precisa de **Acesso Total ao Disco** (Ajustes do Sistema →
+  Privacidade e Segurança → Acesso Total ao Disco → `+` → `/opt/homebrew/bin/fish`). A pasta de trabalho
+  e o log do próprio launchd ficam em `~/Library/Logs/freelas`, no disco interno. Depois de um
+  `brew upgrade fish`, a permissão se perde (o binário muda) e precisa ser concedida de novo; o sintoma
+  é `Operation not permitted` em `~/Library/Logs/freelas/launchd.log`.
 - **Pasta do projeto e versão do Node:** o agendamento grava a pasta do projeto e o caminho do Node do
   terminal onde você rodou o `install` (o `launchd` não carrega o `nvm`). Se mover o projeto ou trocar a
   versão do Node, rode o `install` de novo. Se esquecer, a notificação avisa: "Node/npm não encontrado".
@@ -237,7 +243,7 @@ Dicas:
 
 As palavras-chave não entendem contexto: "Site para encontrar promoções na Shopee" parece um site
 simples, mas é um sistema de coleta de dados. Por isso, depois das regras eliminatórias, cada projeto
-restante vai para uma IA gratuita (Gemini, com o Groq como reserva), que devolve:
+restante vai para uma IA gratuita (Groq, com o modelo `openai/gpt-oss-120b`), que devolve:
 
 - **nota de 0 a 10** de compatibilidade com você (entra no ranking quem tiver `minFit` ou mais);
 - **perfil** mais adequado, que define o texto da proposta;
@@ -249,47 +255,31 @@ o que aceita (em ordem de preferência) e o que recusa. **Ajuste esse texto para
 
 **Com a IA ligada, só ela aprova.** Um projeto que ficou sem nota (falha, cota esgotada) fica fora do
 ranking e é avaliado na próxima execução, para não gastar conexão com projeto sem triagem. Só quando
-nenhum provedor funciona (por exemplo, sem nenhuma chave) o robô volta a usar só as palavras-chave.
+a IA não funciona de jeito nenhum (por exemplo, sem a chave) o robô volta a usar só as palavras-chave.
 
-**Provedores** (`ai.providers`, em ordem de preferência):
-
-| Provedor | Modelo | Chave | Plano gratuito |
-|---|---|---|---|
-| Gemini (principal) | `gemini-3.6-flash` | `GEMINI_API_KEY`, criada em [aistudio.google.com](https://aistudio.google.com/apikey) | Cota diária baixa nesse modelo |
-| Groq (reserva) | `openai/gpt-oss-120b` | `GROQ_API_KEY`, criada em [console.groq.com/keys](https://console.groq.com/keys) | Limite de tokens por minuto e por dia |
-
-Como a reserva funciona:
-
-- **Cota esgotada ou chave recusada** no Gemini: o Groq assume todos os projetos restantes da execução.
-- **Falha num projeto só** (sobrecarga, resposta inválida): aquele projeto tenta o Groq; os próximos
-  continuam começando pelo Gemini.
-- **Provedor sem chave** é ignorado, e o próximo assume.
-- Na coluna "motivo", a nota mostra quem avaliou: `IA gemini 8/10` ou `IA groq 8/10`.
-
-Deixe as chaves no ambiente do terminal, nunca no código. No fish, `set -Ux` grava a variável para
-todos os terminais:
+**Chave:** crie em [console.groq.com/keys](https://console.groq.com/keys) e deixe no ambiente do terminal,
+nunca no código. No fish, `set -Ux` grava a variável para todos os terminais:
 
 ```fish
-set -Ux GEMINI_API_KEY "..."
 set -Ux GROQ_API_KEY "..."
 ```
 
-No bash ou zsh, use `export GEMINI_API_KEY="..."` no `~/.zshrc` ou equivalente.
+No bash ou zsh, use `export GROQ_API_KEY="..."` no `~/.zshrc` ou equivalente.
 
-**Planos gratuitos:**
+**Plano gratuito:**
 
-- **Uso dos dados:** no plano gratuito, o Google pode usar o que é enviado para melhorar os produtos dele.
-  Aqui só vão os anúncios públicos e o seu texto de perfil; não use essas chaves com dados sigilosos.
-- **Limite por minuto:** cada provedor tem um intervalo mínimo entre chamadas (`minIntervalMs`), e as
-  chamadas saem uma por vez (`concurrency: 1`). No Gemini, quando a resposta é "limite atingido" (429)
-  ou "sobrecarregado" (503), o robô espera e tenta de novo (o tempo sugerido pelo Google, ou 10 s, 25 s
-  e 45 s). Se o Google informar que a cota **diária** acabou, ele passa para o Groq na hora. O SDK do Groq
-  repete sozinho nos limites por minuto.
+- **Limites:** o Groq limita tokens por minuto e por dia. As chamadas saem uma por vez
+  (`concurrency: 1`), com intervalo mínimo entre elas (`minIntervalMs`, 12 s). Nos limites por minuto,
+  o SDK do Groq espera e tenta de novo sozinho; se a cota do dia acabar, a IA para e os projetos
+  restantes ficam para a próxima execução.
+- **Dados:** só vão os anúncios públicos e o seu texto de perfil; não use essa chave com dados sigilosos.
+- **Mais de um modelo:** `ai.providers` é uma lista em ordem de preferência. Se o primeiro falhar (cota
+  esgotada), o seguinte assume, e a coluna "motivo" mostra quem avaliou (ex.: `IA groq 8/10`).
 
 | Opção | O que faz | Atual |
 |---|---|---|
 | `enabled` | Liga ou desliga a triagem | `true` |
-| `providers` | Provedores em ordem de preferência: `provider`, `model` e `minIntervalMs` | Gemini → Groq |
+| `providers` | Provedores em ordem de preferência: `provider`, `model` e `minIntervalMs` | Groq (`gpt-oss-120b`) |
 | `minFit` | Nota mínima para entrar no ranking | 7 |
 | `maxCallsPerRun` | Teto de projetos novos avaliados por execução | 80 |
 | `concurrency` | Projetos avaliados ao mesmo tempo | 1 |
@@ -338,9 +328,9 @@ escolhe outro freelancer. Antes de cada envio, o robô confere no formulário e:
 | `o site sinalizou o texto como suspeito` | Tire contatos e links do texto, ou use `SHOW_PORTFOLIO_LINK = false` |
 | `oferta abaixo do mínimo do projeto` | Aumente o `value` do perfil |
 | `texto com N caracteres (máx. 3000)` | Encurte o template do perfil |
-| `Provedores ignorados: gemini: GEMINI_API_KEY não definida` | A chave não está no ambiente do terminal; veja [Triagem por IA](#triagem-por-ia) |
-| `Gemini recusou a requisição (400)` / `Groq recusou a requisição (404)` | Chave inválida ou nome de modelo errado em `ai.providers` |
-| `gemini indisponível (cota ... esgotada); seguindo com groq` | Normal no plano gratuito: o Groq assume o resto da execução |
+| `IA indisponível (groq: GROQ_API_KEY não definida)` | A chave não está no ambiente do terminal; veja [Triagem por IA](#triagem-por-ia) |
+| `Groq recusou a requisição (401/404)` | Chave inválida ou nome de modelo errado em `ai.providers` |
+| `cota do plano gratuito do Groq esgotada` | A cota do dia acabou; os projetos sem nota voltam na próxima execução |
 | `N projeto(s) sem nota ficam fora do ranking` | Os dois provedores falharam nesses projetos; eles voltam na próxima execução |
 | A IA aprova projetos que você não quer | Acrescente o tipo de trabalho na lista do que você recusa, em `ai.freelancer`, ou aumente o `minFit` |
 | `Node/npm não encontrado` (notificação do agendamento) | Rode `npm run schedule -- install 09:00` de novo, num terminal onde `node -v` funcione |
@@ -383,7 +373,7 @@ Para o robô "esquecer" um projeto e tentar de novo, apague a entrada dele em `d
 | `src/ai.ts` | Base da IA: pedido genérico aos provedores, cadeia de reserva, ritmo, triagem e cache |
 | `src/providers.ts` | Monta a cadeia de provedores a partir do config |
 | `src/composer.ts` | Redação das propostas pela IA, com as faixas de valor e prazo |
-| `src/gemini.ts` / `src/groq.ts` | Provedores (saída em JSON Schema e tratamento de limites) |
+| `src/groq.ts` | Provedor Groq (saída em JSON Schema estrito e tratamento de limites) |
 | `scripts/daily.sh` / `scripts/schedule.sh` | Execução diária com log e notificação, e agendamento no `launchd` |
 | `src/proposal.ts` + `src/selectors.ts` | Formulário de proposta: regras, preenchimento e envio |
 | `src/store.ts` | Histórico em `data/history.json` |

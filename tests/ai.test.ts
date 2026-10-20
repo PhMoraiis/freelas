@@ -11,7 +11,7 @@ const profiles: Profile[] = [
 ];
 const filter: FilterConfig = { excludeKeywords: ['wordpress'], excludeCategories: [], levels: [], minScore: 5 };
 const ai: AiConfig = {
-  enabled: true, providers: [{ provider: 'gemini', model: 'modelo-teste' }], minFit: 7, concurrency: 2, maxCallsPerRun: 10,
+  enabled: true, providers: [{ provider: 'groq', model: 'modelo-teste' }], minFit: 7, concurrency: 2, maxCallsPerRun: 10,
   freelancer: 'Faz sites simples.', composeProposals: true,
 };
 
@@ -130,49 +130,49 @@ describe('withFallback', () => {
 
   it('usa o primeiro provedor e diz quem respondeu', async () => {
     const generate = withFallback([
-      { name: 'gemini', generate: answering({ ok: true }) },
-      { name: 'groq', generate: answering({ ok: false }) },
+      { name: 'primario', generate: answering({ ok: true }) },
+      { name: 'reserva', generate: answering({ ok: false }) },
     ]);
-    expect(await generate(request())).toEqual({ data: { ok: true }, source: 'gemini' });
+    expect(await generate(request())).toEqual({ data: { ok: true }, source: 'primario' });
   });
 
   it('erro ou resposta inválida num pedido passa só aquele pedido para o próximo', async () => {
     const calls: string[] = [];
-    let geminiCalls = 0;
-    const gemini: Generator = (async () => {
-      calls.push('gemini');
-      if (geminiCalls++ === 0) throw new Error('503');
+    let primaryCalls = 0;
+    const primary: Generator = (async () => {
+      calls.push('primario');
+      if (primaryCalls++ === 0) throw new Error('503');
       return null;
     }) as Generator;
-    const groq: Generator = (async () => (calls.push('groq'), { ok: true })) as Generator;
-    const generate = withFallback([{ name: 'gemini', generate: gemini }, { name: 'groq', generate: groq }]);
+    const backup: Generator = (async () => (calls.push('reserva'), { ok: true })) as Generator;
+    const generate = withFallback([{ name: 'primario', generate: primary }, { name: 'reserva', generate: backup }]);
 
-    expect(await generate(request())).toMatchObject({ source: 'groq' });
-    expect(await generate(request())).toMatchObject({ source: 'groq' });
-    // O Gemini continua sendo tentado primeiro: a falha não foi fatal
-    expect(calls).toEqual(['gemini', 'groq', 'gemini', 'groq']);
+    expect(await generate(request())).toMatchObject({ source: 'reserva' });
+    expect(await generate(request())).toMatchObject({ source: 'reserva' });
+    // O primeiro provedor continua sendo tentado antes: a falha não foi fatal
+    expect(calls).toEqual(['primario', 'reserva', 'primario', 'reserva']);
   });
 
   it('erro fatal desliga o provedor pelo resto da execução', async () => {
-    let geminiCalls = 0;
-    const gemini: Generator = (async () => {
-      geminiCalls++;
+    let primaryCalls = 0;
+    const primary: Generator = (async () => {
+      primaryCalls++;
       throw new AiFatalError('cota');
     }) as Generator;
-    const generate = withFallback([{ name: 'gemini', generate: gemini }, { name: 'groq', generate: answering({ ok: true }) }]);
+    const generate = withFallback([{ name: 'primario', generate: primary }, { name: 'reserva', generate: answering({ ok: true }) }]);
     await generate(request());
-    expect(await generate(request())).toMatchObject({ source: 'groq' });
-    expect(geminiCalls).toBe(1);
+    expect(await generate(request())).toMatchObject({ source: 'reserva' });
+    expect(primaryCalls).toBe(1);
   });
 
   it('todos indisponíveis vira erro fatal; erro comum no último provedor sobe como está', async () => {
     const dead = withFallback([
-      { name: 'gemini', generate: failing(new AiFatalError('cota')) },
-      { name: 'groq', generate: failing(new AiFatalError('chave')) },
+      { name: 'primario', generate: failing(new AiFatalError('cota')) },
+      { name: 'reserva', generate: failing(new AiFatalError('chave')) },
     ]);
     await expect(dead(request())).rejects.toThrow(AiFatalError);
 
-    const flaky = withFallback([{ name: 'groq', generate: failing(new Error('500')) }]);
+    const flaky = withFallback([{ name: 'reserva', generate: failing(new Error('500')) }]);
     await expect(flaky(request())).rejects.toThrow('500');
   });
 });

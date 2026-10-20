@@ -1,8 +1,9 @@
 import Groq from 'groq-sdk';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { AiFatalError } from '../src/ai';
+import { AiFatalError, toJsonSchema, verdictSchema } from '../src/ai';
 import { createGroqGenerator } from '../src/groq';
+import type { Profile } from '../src/types';
 
 const schema = z.object({ fit: z.number(), kind: z.enum(['site_simples', 'outro']) });
 const request = { name: 'triagem', system: 'Faz sites.', user: 'Site institucional', schema };
@@ -25,6 +26,19 @@ function fakeClient(result: string | Error) {
 }
 
 const apiError = (Cls: any, status: number) => new Cls(status, { error: { message: 'x' } }, 'x', new Headers());
+
+describe('toJsonSchema', () => {
+  it('gera JSON Schema sem "$schema" e com os perfis no enum', () => {
+    const profiles: Profile[] = [{ name: 'Sites', keywords: ['site'], proposal: { value: 1, days: 1, template: '' } }];
+    const json = toJsonSchema(verdictSchema(profiles)) as any;
+    expect(json.$schema).toBeUndefined();
+    expect(json.type).toBe('object');
+    expect(json.properties.profile.enum).toEqual(['nenhum', 'Sites']);
+    expect(json.required).toContain('fit');
+    // O modo estrito do Groq exige additionalProperties: false
+    expect(json.additionalProperties).toBe(false);
+  });
+});
 
 describe('createGroqGenerator', () => {
   it('envia system + mensagem com schema estrito e valida a resposta', async () => {

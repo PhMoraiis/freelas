@@ -133,10 +133,9 @@ const config: AppConfig = {
   // Desligada, vale só o filtro por palavras-chave acima.
   ai: {
     enabled: true,
-    // Em ordem de preferência: se o Gemini falhar (cota esgotada, sobrecarga), o Groq assume.
-    // Chaves no ambiente do terminal: GEMINI_API_KEY e GROQ_API_KEY
+    // Chave no ambiente do terminal: GROQ_API_KEY. A lista aceita mais de um provedor/modelo:
+    // se o primeiro falhar (cota esgotada), o seguinte assume
     providers: [
-      { provider: 'gemini', model: 'gemini-3.6-flash', minIntervalMs: 6_000 },
       // ~2 mil tokens por avaliação; 12s entre chamadas fica abaixo do limite de tokens por minuto
       { provider: 'groq', model: 'openai/gpt-oss-120b', minIntervalMs: 12_000 },
     ],
