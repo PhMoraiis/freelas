@@ -14,15 +14,36 @@ export interface Session {
 }
 
 export async function openSession(config: AppConfig, overrides: { headless?: boolean } = {}): Promise<Session> {
+  const headless = overrides.headless ?? config.browser.headless;
+  // Sem janela, o canal 'chromium' usa o modo headless novo (o navegador completo), mais parecido
+  // com o Chrome de verdade que o headless_shell enxuto que o Playwright usa por padrão
+  const channel = config.browser.channel ?? (headless ? 'chromium' : undefined);
   const context = await chromium.launchPersistentContext(USER_DATA_DIR, {
-    headless: overrides.headless ?? config.browser.headless,
-    channel: config.browser.channel,
+    headless,
+    channel,
+    userAgent: headless ? await headfulUserAgent(channel) : undefined,
     locale: 'pt-BR',
     timezoneId: 'America/Sao_Paulo',
-    viewport: null,
+    viewport: headless ? { width: 1440, height: 900 } : null,
   });
   const page = context.pages()[0] ?? (await context.newPage());
   return { context, page };
+}
+
+/**
+ * O modo headless se anuncia como "HeadlessChrome" no user agent, um dos primeiros sinais que o
+ * Cloudflare confere. Lê o user agent do mesmo navegador (sem perfil, para não disputar o
+ * .auth/ com outro processo) e troca pelo nome que a versão com janela usa.
+ */
+async function headfulUserAgent(channel: string | undefined): Promise<string> {
+  const browser = await chromium.launch({ headless: true, channel });
+  try {
+    const page = await browser.newPage();
+    const userAgent = await page.evaluate(() => navigator.userAgent);
+    return userAgent.replace('HeadlessChrome/', 'Chrome/');
+  } finally {
+    await browser.close();
+  }
 }
 
 /**

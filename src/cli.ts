@@ -26,8 +26,12 @@ const { positionals, values } = parseArgs({
 
 const [command, arg] = positionals;
 
-async function withSession(fn: (session: Session) => Promise<void>): Promise<void> {
-  const session = await openSession(config, { headless: values.headless });
+async function withSession(
+  fn: (session: Session) => Promise<void>,
+  { needsWindow = false }: { needsWindow?: boolean } = {},
+): Promise<void> {
+  // Revisar a proposta ou usar o Inspector só faz sentido com o navegador à vista
+  const session = await openSession(config, { headless: needsWindow ? false : values.headless });
   try {
     await fn(session);
   } finally {
@@ -204,7 +208,7 @@ const commands: Record<string, () => Promise<void>> = {
     if (sendMode() !== 'dry') {
       await manualLogin(config, { timeoutMs: AUTO_LOGIN_TIMEOUT_MS, reason: 'Login do 99freelas expirado.' });
     }
-    await withSession(send);
+    await withSession(send, { needsWindow: sendMode() === 'review' });
   },
   inspect: () =>
     withSession(async ({ page }) => {
@@ -212,12 +216,12 @@ const commands: Record<string, () => Promise<void>> = {
       await page.goto(arg);
       console.log('Playwright Inspector aberto: use "Pick locator" para descobrir os seletores e feche ao terminar.');
       await page.pause();
-    }),
+    }, { needsWindow: true }),
 };
 
 const run = commands[command ?? ''];
 if (!run) {
-  console.log('Comandos: login | scan [--pages N|all] [--all] | send [--mode dry|review|auto] [--limit N] [--pages N|all] | inspect <url>\nOpções: --headless (sem janela) · --no-ai / --ai (liga ou desliga a triagem por IA)');
+  console.log('Comandos: login | scan [--pages N|all] [--all] | send [--mode dry|review|auto] [--limit N] [--pages N|all] | inspect <url>\nOpções: --no-headless (com janela) · --no-ai / --ai (liga ou desliga a triagem por IA)');
   process.exit(1);
 }
 run().catch((error) => {

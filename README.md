@@ -85,7 +85,8 @@ No modo `review`, o terminal pergunta: **Enter** = já enviei · **p** = pular �
 Opções que valem para `scan` e `send`:
 
 - `--pages 5`: varre só as 5 primeiras páginas (padrão: `all`).
-- `--headless`: roda sem abrir janela.
+- `--no-headless`: abre a janela do navegador para acompanhar a execução (o padrão é rodar sem janela;
+  o modo `review` e o `inspect` sempre abrem).
 - `--no-ai`: desliga a triagem por IA nesta execução (`--ai` liga, se estiver desligada no config).
 
 > Lembre do `--` antes das opções: `npm run send -- --mode dry`.
@@ -138,8 +139,9 @@ Cuidados:
 - **Pasta do projeto e versão do Node:** o agendamento grava a pasta do projeto e o caminho do Node do
   terminal onde você rodou o `install` (o `launchd` não carrega o `nvm`). Se mover o projeto ou trocar a
   versão do Node, rode o `install` de novo. Se esquecer, a notificação avisa: "Node/npm não encontrado".
-- O navegador abre uma janela durante a execução (é o que o `headless: false` do config pede, porque o
-  Cloudflare do site desconfia menos de janela visível).
+- Roda sem janela (`headless: true` no config). A única janela que aparece é a de login, quando a
+  sessão expira. Se o Cloudflare começar a barrar o robô, troque para `headless: false` no config:
+  com janela visível ele desconfia menos, mas a janela abre a cada execução.
 
 Para testar sem enviar nada: `scripts/daily.sh --mode dry`. Com argumentos, o script sempre roda e não
 conta como a execução do dia.

@@ -94,8 +94,9 @@ Você já tem os textos e as imagens, ou prefere que eu sugira a estrutura do co
 
 const config: AppConfig = {
   browser: {
-    // Com interface aberta o Cloudflare do site desconfia menos
-    headless: false,
+    // Sem janela, para o agendamento rodar em segundo plano. Se o Cloudflare começar a barrar,
+    // troque para false (com interface aberta ele desconfia menos) ou rode com --no-headless
+    headless: true,
     // channel: 'chrome', // descomente para usar o Google Chrome instalado
   },
 
