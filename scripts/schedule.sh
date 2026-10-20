@@ -12,10 +12,14 @@ label="local.freelas"
 # Rótulo usado antes da troca de nome do projeto; removido no install/uninstall
 legacy_label="local.99freelas-bot"
 project="$(cd "$(dirname "$0")/.." && pwd)"
+# Pasta de trabalho e log do launchd ficam no disco interno: o launchd não consegue iniciar a tarefa
+# se elas estiverem num disco externo (o macOS bloqueia o acesso de tarefas em segundo plano).
+# O projeto em si pode ficar no disco externo, desde que o shell tenha "Acesso Total ao Disco"
+runtime_dir="$HOME/Library/Logs/freelas"
 plist="$HOME/Library/LaunchAgents/$label.plist"
 domain="gui/$(id -u)"
 # O shell de login do usuário (o cadastrado no macOS, não o do terminal atual) carrega o PATH
-# (node/npm) e as chaves GEMINI_API_KEY e GROQ_API_KEY
+# (node/npm) e a chave GROQ_API_KEY
 login_shell="$(dscl . -read "/Users/$USER" UserShell 2>/dev/null | awk '{print $2}')"
 login_shell="${login_shell:-${SHELL:-/bin/zsh}}"
 # O launchd começa com um PATH mínimo, e o nvm só ativa o Node em terminais interativos: grava no
@@ -44,7 +48,7 @@ render() {
     <string>'$project/scripts/daily.sh'</string>
   </array>
   <key>WorkingDirectory</key>
-  <string>$project</string>
+  <string>$runtime_dir</string>
   <key>EnvironmentVariables</key>
   <dict>
     <key>PATH</key>
@@ -62,9 +66,9 @@ render() {
     <integer>$minute</integer>
   </dict>
   <key>StandardOutPath</key>
-  <string>$project/data/logs/launchd.log</string>
+  <string>$runtime_dir/launchd.log</string>
   <key>StandardErrorPath</key>
-  <string>$project/data/logs/launchd.log</string>
+  <string>$runtime_dir/launchd.log</string>
 </dict>
 </plist>
 PLIST
@@ -81,14 +85,14 @@ case "${1:-}" in
       echo "Node não encontrado neste terminal; abra um terminal onde 'node -v' funcione e rode de novo." >&2
       exit 1
     fi
-    mkdir -p "$HOME/Library/LaunchAgents" "$project/data/logs"
+    mkdir -p "$HOME/Library/LaunchAgents" "$project/data/logs" "$runtime_dir"
     remove_legacy
     launchctl bootout "$domain/$label" 2>/dev/null || true
     render "${2:-09:00}" >"$plist"
     plutil -lint "$plist" >/dev/null
     launchctl bootstrap "$domain" "$plist"
     echo "Agendado: ao fazer login e todos os dias às ${2:-09:00}, no máximo uma vez por dia."
-    echo "Logs em $project/data/logs/"
+    echo "Logs em $project/data/logs/ (erros do próprio launchd em $runtime_dir/launchd.log)"
     ;;
   uninstall)
     remove_legacy
